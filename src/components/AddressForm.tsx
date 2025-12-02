@@ -188,7 +188,7 @@ const AddressForm = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+    <div className="w-full max-w-md mx-auto p-8 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-xl shadow-2xl">
       <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">
         German Address Validator
       </h2>
