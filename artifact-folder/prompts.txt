@@ -1,0 +1,230 @@
+AI Usage Documentation for DPS React Challenge
+
+Overview
+This document tracks all AI-assisted prompts and decisions made during the development of the German Address Validator application.
+
+
+Prompts Used
+
+1. Initial Project Setup
+Prompt:
+"I need to build a German address validator using React, Vite, and the Open PLZ API. The form should have two fields: Locality and Postal Code. 
+When a user types a locality, it should auto-fill the postal code if there's only one, or show a dropdown if there are multiple. 
+When a user enters a postal code, it should auto-fill the locality. Include 1-second debounce on inputs. Can you help me structure this project?"
+
+AI Assistance:
+- Initially generated the code base with cursor prompt. I copied a prompt template from cursor to serve as a guide for generating the folder structure.
+- Suggested project structure with separate folders for components, hooks, and services
+- Recommended creating a custom useDebounce hook
+- Advised on API service layer pattern
+
+Code Generated:
+- Basic folder structure
+- Initial component scaffolding
+
+
+2. API Integration
+Prompt:
+"How do I integrate with the Open PLZ API (https://openplzapi.org/de)? I need to search localities by name and postal codes by code. 
+What endpoints should I use and how should I handle the responses?"
+
+AI Assistance:
+- Explained the API endpoints: `/Localities?name=` and `/Localities?postalCode=`
+- Suggested error handling patterns
+- Recommended TypeScript interfaces for type safety
+
+Code Generated:
+- `openPlzApi.ts` service file with searchLocalitiesByName and searchPostalCodesByCode functions
+- TypeScript interfaces for Locality and PostalCode
+
+Modifications Made:
+- Added additional response format handling (array vs object with results/data properties)
+- Added validation for 5-digit postal code format
+- Enhanced error handling with console logging
+
+
+3. Debounce Hook Implementation
+Prompt:
+"Create a custom React hook for debouncing input values with a configurable delay. Default should be 1000ms."
+
+AI Assistance:
+- Provided complete useDebounce hook implementation
+- Explained the setTimeout/clearTimeout pattern
+- Suggested TypeScript generic type for flexibility
+
+Code Generated:
+- Complete `useDebounce.ts` hook
+
+Modifications Made:
+- None - used as provided
+
+
+4. Form State Management
+Prompt:
+"I need to manage complex state for the address form. The postal code field should switch between input and dropdown based on API results. 
+How should I structure the state and handle the different scenarios?"
+
+AI Assistance:
+- Suggested using multiple useState hooks for different concerns
+- Recommended separate flags for tracking user interactions (touched states)
+- Advised on preventing infinite loops with proper useEffect dependencies
+
+Code Generated:
+- State management structure in AddressForm component
+- Initial useEffect hooks for API calls
+
+Modifications Made:
+- Added `isSelectingFromDropdown` flag to prevent unnecessary API calls when selecting from dropdown
+- Enhanced touched state logic to prevent premature API calls
+- Added loading state management
+
+5. Handling Edge Cases
+Prompt:
+"What edge cases should I handle? For example, what if a user types in one field while the other is auto-filling? Or what if they select from the dropdown?"
+
+AI Assistance:
+- Identified key edge cases:
+  - User clearing input fields
+  - Selecting from dropdown should not trigger new API call
+  - Multiple localities with same postal code
+  - Invalid postal codes
+  - Network errors
+
+Code Generated:
+- Conditional logic in useEffect hooks
+- Error state management
+
+Modifications Made:
+- Added `isSelectingFromDropdown` flag and logic
+- Enhanced error messages to be more user-friendly
+- Added validation for empty inputs
+
+
+6. UI/UX Improvements
+Prompt:
+"How can I improve the user experience? I want to show loading states, error messages, and success indicators. Also need dark mode support."
+
+AI Assistance:
+- Suggested Tailwind CSS classes for styling
+- Recommended loading spinner animation
+- Advised on accessibility attributes (aria-labels, roles)
+
+Code Generated:
+- Loading indicator component
+- Error and success message displays
+- Dark mode styling with Tailwind classes
+
+Modifications Made:
+- Customized color scheme to match DPS branding
+- Added backdrop blur effect for modern look
+- Enhanced accessibility with proper ARIA attributes
+
+
+7. Preventing Form Submission
+Prompt:
+"Users are accidentally submitting the form when pressing Enter. How do I prevent this while keeping the form accessible?"
+
+AI Assistance:
+- Suggested preventDefault on form submit
+- Recommended onKeyDown handler for Enter key
+- Advised maintaining keyboard navigation with tabIndex
+
+Code Generated:
+- handleKeyDown function
+- Form onSubmit handler
+
+Modifications Made:
+- None - used as provided
+
+
+8. TypeScript Type Safety
+Prompt:
+"Help me add proper TypeScript types for all the event handlers and API responses."
+
+AI Assistance:
+- Provided React.ChangeEvent types for input/select handlers
+- Suggested proper typing for async functions
+- Recommended interface definitions for API data
+
+Code Generated:
+- Type annotations throughout the component
+- Interface definitions in API service
+
+Modifications Made:
+- Added more specific types for state variables
+- Enhanced type safety in API response handling
+
+
+Parts That Were AI-Assisted
+
+1. Complete AI Generation (90-100%):
+   - useDebounce hook
+   - API service structure
+   - TypeScript interfaces
+
+2. Significant AI Assistance (50-90%):
+   - AddressForm component structure
+   - State management logic
+   - Error handling patterns
+
+3. Partial AI Assistance (10-50%):
+   - Styling and UI polish
+   - Edge case handling
+   - Accessibility improvements
+
+4. Manual Implementation (0-10%):
+   - Project configuration (Vite, Tailwind)
+   - Custom styling adjustments
+   - Testing and debugging
+
+
+Code Snippets Rejected
+
+Rejected Snippet 1: Using axios instead of fetch
+Reason: Wanted to keep dependencies minimal and fetch is native
+
+Rejected Snippet 2: Using React Hook Form
+Reason: Form is simple enough that useState is sufficient
+
+Rejected Snippet 3: Separate components for input fields
+Reason: Over-engineering for this small form; kept it in one component
+
+
+Decision-Making Process
+
+1. API Integration: Chose to use the Localities endpoint for both searches because it provides more consistent data structure
+2. State Management: Decided against Redux/Context as the state is localized to one component
+3. Styling: Used Tailwind CSS for rapid development and easy dark mode support
+4. Debouncing: Implemented custom hook instead of using lodash to reduce bundle size
+5. Error Handling: Chose user-friendly messages over technical error details
+
+
+Testing Approach
+
+Manual testing performed for:
+- Valid German postal codes (e.g., 10115 Berlin, 80331 München)
+- Invalid postal codes
+- Localities with single postal code
+- Localities with multiple postal codes
+- Empty input handling
+- Rapid typing (debounce testing)
+- Dropdown selection behavior
+
+
+Future Improvements (Not Implemented)
+
+1. Add unit tests with Vitest
+2. Add E2E tests with Playwright
+3. Implement autocomplete suggestions while typing
+4. Add street address validation
+5. Cache API responses to reduce network calls
+6. Add internationalization support
+7. Implement form submission and data persistence
+
+
+Notes
+
+- All AI interactions were used to accelerate development and ensure best practices
+- Code was reviewed and tested manually before committing
+- AI suggestions were evaluated critically and modified where necessary
+- Focus was on clean, maintainable code over clever solutions
