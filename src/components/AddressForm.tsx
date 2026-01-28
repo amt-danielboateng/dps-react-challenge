@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDebounce } from '../hooks/useDebounce';
 import { searchLocalitiesByName, searchPostalCodesByCode, type Locality, type PostalCode } from '../services/openPlzApi';
 
@@ -11,10 +11,16 @@ const AddressForm = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [localityTouched, setLocalityTouched] = useState<boolean>(false);
   const [postalCodeTouched, setPostalCodeTouched] = useState<boolean>(false);
-  const [isSelectingFromDropdown, setIsSelectingFromDropdown] = useState<boolean>(false);
+  const skipPostalCodeSearchRef = useRef<boolean>(false);
+  const postalCodeRef = useRef<string>(postalCode);
 
   const debouncedLocality = useDebounce(locality, 1000);
   const debouncedPostalCode = useDebounce(postalCode, 1000);
+
+  // Keep ref in sync with state for use in effects without dependency cycles
+  useEffect(() => {
+    postalCodeRef.current = postalCode;
+  }, [postalCode]);
 
   // Handle locality lookup
   useEffect(() => {
@@ -40,16 +46,20 @@ const AddressForm = () => {
       setError('');
       
       try {
-        const localities: Locality[] = await searchLocalitiesByName(debouncedLocality);
+        // Fetch with a larger page size to handle pagination and ensure we find exact matches
+        const localities: Locality[] = await searchLocalitiesByName(debouncedLocality.trim(), undefined, 1, 50);
         
-        if (localities.length === 0) {
+        // Filter for exact matches to avoid showing postal codes for "Münster" when user typed "Mü"
+        const exactMatches = localities.filter(l => l.name.trim().toLowerCase() === debouncedLocality.trim().toLowerCase());
+        
+        if (exactMatches.length === 0) {
           setPostalCodeOptions([]);
           setIsPostalCodeDropdown(false);
           setPostalCode('');
           setError(`${debouncedLocality} is not a locality in Germany.`);
-        } else if (localities.length === 1) {
+        } else if (exactMatches.length === 1) {
           // Single postal code - auto-fill
-          const uniquePostalCodes = [...new Set(localities.map(l => l.postalCode))];
+          const uniquePostalCodes = [...new Set(exactMatches.map(l => l.postalCode))];
           if (uniquePostalCodes.length === 1) {
             setPostalCode(uniquePostalCodes[0]);
             setIsPostalCodeDropdown(false);
@@ -58,11 +68,14 @@ const AddressForm = () => {
             // Multiple postal codes for same locality name
             setPostalCodeOptions(uniquePostalCodes);
             setIsPostalCodeDropdown(true);
-            setPostalCode('');
+            // Only clear postal code if the current one is not in the valid list
+            if (!uniquePostalCodes.includes(postalCodeRef.current)) {
+              setPostalCode('');
+            }
           }
         } else {
           // Multiple localities with potentially multiple postal codes
-          const uniquePostalCodes = [...new Set(localities.map(l => l.postalCode))];
+          const uniquePostalCodes = [...new Set(exactMatches.map(l => l.postalCode))];
           if (uniquePostalCodes.length === 1) {
             setPostalCode(uniquePostalCodes[0]);
             setIsPostalCodeDropdown(false);
@@ -70,7 +83,10 @@ const AddressForm = () => {
           } else {
             setPostalCodeOptions(uniquePostalCodes);
             setIsPostalCodeDropdown(true);
-            setPostalCode('');
+            // Only clear postal code if the current one is not in the valid list
+            if (!uniquePostalCodes.includes(postalCodeRef.current)) {
+              setPostalCode('');
+            }
           }
         }
       } catch (err) {
@@ -87,11 +103,7 @@ const AddressForm = () => {
   // Handle postal code lookup
   useEffect(() => {
     if (!debouncedPostalCode || debouncedPostalCode.trim().length === 0) {
-      if (postalCodeTouched && localityTouched && !isSelectingFromDropdown) {
-        setLocality('');
-      }
       setError('');
-      setIsSelectingFromDropdown(false);
       return;
     }
 
@@ -100,8 +112,8 @@ const AddressForm = () => {
     }
 
     // Don't trigger lookup if postal code was selected from dropdown
-    if (isSelectingFromDropdown) {
-      setIsSelectingFromDropdown(false);
+    if (skipPostalCodeSearchRef.current) {
+      skipPostalCodeSearchRef.current = false;
       return;
     }
 
@@ -163,13 +175,13 @@ const AddressForm = () => {
     
     // If selecting from dropdown, mark it so we don't trigger another lookup
     if (isPostalCodeDropdown && e.target.tagName === 'SELECT') {
-      setIsSelectingFromDropdown(true);
+      skipPostalCodeSearchRef.current = true;
     } else {
       // Reset locality if user is typing in postal code (not selecting from dropdown)
       if (value.length > 0 && !isPostalCodeDropdown) {
         setLocality('');
       }
-      setIsSelectingFromDropdown(false);
+      skipPostalCodeSearchRef.current = false;
     }
   };
 
@@ -295,4 +307,3 @@ const AddressForm = () => {
 };
 
 export default AddressForm;
-

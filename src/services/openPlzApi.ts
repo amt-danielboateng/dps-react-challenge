@@ -14,23 +14,23 @@ export interface PostalCode {
  * Search for localities by name and optionally by postal code
  * @param localityName - The name of the locality to search for
  * @param postalCode - Optional postal code to filter the search
+ * @param page - Page number for pagination (default: 1)
+ * @param pageSize - Number of results per page (default: 50)
  * @returns Array of localities matching the name and postal code (if provided)
  */
 export const searchLocalitiesByName = async (
   localityName: string,
-  postalCode?: string
+  postalCode?: string,
+  page: number = 1,
+  pageSize: number = 50
 ): Promise<Locality[]> => {
   if (!localityName || localityName.trim().length === 0) {
     return [];
   }
 
   try {
-    let url = `${API_BASE_URL}/Localities?name=${encodeURIComponent(localityName)}`;
-    
-    // Add postal code to query if provided
-    if (postalCode && postalCode.trim().length > 0) {
-      url += `&postalCode=${encodeURIComponent(postalCode)}`;
-    }
+    const searchTerm = postalCode ? `${localityName} ${postalCode}` : localityName;
+    const url = `${API_BASE_URL}/FullTextSearch?searchTerm=${encodeURIComponent(searchTerm)}&page=${page}&pageSize=${pageSize}`;
     
     const response = await fetch(url);
     
@@ -39,17 +39,33 @@ export const searchLocalitiesByName = async (
     }
 
     const data = await response.json();
+    let results: any[] = [];
+
     // Handle different response formats
     if (Array.isArray(data)) {
-      return data;
+      results = data;
+    } else if (data && Array.isArray(data.results)) {
+      results = data.results;
+    } else if (data && Array.isArray(data.data)) {
+      results = data.data;
     }
-    if (data && Array.isArray(data.results)) {
-      return data.results;
-    }
-    if (data && Array.isArray(data.data)) {
-      return data.data;
-    }
-    return [];
+
+    // Map results to Locality objects and deduplicate
+    const uniqueLocalities = new Map<string, Locality>();
+    
+    results.forEach((item) => {
+      const name = item.locality || item.name;
+      const code = item.postalcode || item.postalCode;
+
+      if (name && code) {
+        const key = `${name}-${code}`;
+        if (!uniqueLocalities.has(key)) {
+          uniqueLocalities.set(key, { name, postalCode: code });
+        }
+      }
+    });
+
+    return Array.from(uniqueLocalities.values());
   } catch (error) {
     console.error('Error fetching localities:', error);
     return [];
@@ -120,4 +136,3 @@ export const searchPostalCodesByCode = async (postalCode: string): Promise<Posta
     return [];
   }
 };
-
